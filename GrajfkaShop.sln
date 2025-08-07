@@ -4,8 +4,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorApp", "BlazorApp\Blaz
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorApp.Client", "BlazorApp\BlazorApp.Client\BlazorApp.Client.csproj", "{D45F1082-FBAA-4B59-998E-8B3A18E2265C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API", "API\API.csproj", "{8AC92A6B-73C2-408A-86C9-C11F034964A9}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Domain\Domain.csproj", "{6CBA504E-6787-4D8A-ABA1-8947745E8C44}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastructure\Infrastructure.csproj", "{63F95899-95E3-48C7-9F6C-E01D603DB804}"
@@ -26,10 +24,6 @@ Global
 		{D45F1082-FBAA-4B59-998E-8B3A18E2265C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D45F1082-FBAA-4B59-998E-8B3A18E2265C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D45F1082-FBAA-4B59-998E-8B3A18E2265C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8AC92A6B-73C2-408A-86C9-C11F034964A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8AC92A6B-73C2-408A-86C9-C11F034964A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8AC92A6B-73C2-408A-86C9-C11F034964A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8AC92A6B-73C2-408A-86C9-C11F034964A9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6CBA504E-6787-4D8A-ABA1-8947745E8C44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6CBA504E-6787-4D8A-ABA1-8947745E8C44}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6CBA504E-6787-4D8A-ABA1-8947745E8C44}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -1,11 +1,16 @@
-using BlazorApp.Client.Pages;
 using BlazorApp.Components;
+using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
+
+builder.Services.AddControllers();
+
+builder.Services.AddInfrastructure(builder.Configuration);
+//builder.Services.AddApplication(builder.Configuration);
 
 var app = builder.Build();
 
