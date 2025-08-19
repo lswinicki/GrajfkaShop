@@ -21,7 +21,6 @@ public static class DependencyInjection
         services.AddIdentityCore<UserDao>()
             .AddRoles<IdentityRole<int>>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
-
         
         return services;
     }
