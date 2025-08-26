@@ -1,0 +1,243 @@
+@page "/"
+
+<PageTitle>GRAJFKA - Biżuteria, Zaproszenia i nie tylko!</PageTitle>
+
+<section id="home" class="hero">
+    <div class="hero-content">
+        <h1 class="hero-title">
+            Biżuteria i <br>
+            <span class="gradient-text">Zaproszenia</span><br>
+            na Każdą Okazję
+        </h1>
+        <p class="hero-description">
+            Oferujemy wyjątkową biżuterię – bransoletki, kolczyki i naszyjniki – oraz piękne zaproszenia i kartki na wesela, urodziny i chrzciny. Każdy produkt tworzony jest z pasją, aby podkreślić wyjątkowy charakter Twojej uroczystości.
+        </p>
+        <div class="hero-buttons">
+            @*<button class="btn-primary" @onclick="ScrollToProducts">Zobacz Ofertę</button>*@
+            <button class="btn-secondary">Zamów projekt</button>
+        </div>
+    </div>
+    <div class="hero-visual">
+        <div class="hero-circle">
+            <div class="hero-icon">💌</div>
+        </div>
+        <div class="floating-element-1"></div>
+        <div class="floating-element-2"></div>
+    </div>
+</section>
+
+<!-- Products Section -->
+<section id="products" class="products-section">
+    <div class="section-header">
+        <h2 class="section-title">Nasze Bestsellery</h2>
+        <p class="section-description">
+            Najpopularniejsze zaproszenia i dodatki wybierane przez naszych klientów
+        </p>
+    </div>
+    <div class="products-grid">
+        @foreach (var product in products)
+        {
+            <div class="product-card">
+                <div class="product-image">
+                    <div class="product-icon">@product.Icon</div>
+                    <div class="heart-icon">❤️</div>
+                </div>
+                <div class="product-info">
+                    <h3 class="product-name">@product.Name</h3>
+                    <p class="product-description">@product.Description</p>
+                    <div class="product-footer">
+                        <span class="product-price">@product.Price.ToString("F2") zł</span>
+                        <button class="add-to-cart" @onclick="() => AddToCart(product.Id)">
+                            Dodaj do koszyka
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Collections Section -->
+<section id="collections" class="collections-section">
+    <div class="section-header">
+        <h2 class="section-title">Kategorie Produktów</h2>
+        <p class="section-description">Znajdź idealne rozwiązanie na każdą uroczystość</p>
+    </div>
+    <div class="collections-grid">
+        <div class="collection-card">
+            <div class="collection-bg wedding">
+                <div class="collection-icon">💒</div>
+            </div>
+            <div class="collection-overlay"></div>
+            <div class="collection-content">
+                <h3 class="collection-title">Wesela & Śluby</h3>
+                <p class="collection-description">Eleganckie zaproszenia ślubne, dodatki weselne i biżuteria dla Pary Młodej</p>
+                <button class="collection-btn">Zobacz produkty</button>
+            </div>
+        </div>
+        <div class="collection-card">
+            <div class="collection-bg birthday">
+                <div class="collection-icon">🎂</div>
+            </div>
+            <div class="collection-overlay"></div>
+            <div class="collection-content">
+                <h3 class="collection-title">Urodziny</h3>
+                <p class="collection-description">Kolorowe kartki urodzinowe, zaproszenia na party i dodatki świąteczne</p>
+                <button class="collection-btn">Zobacz produkty</button>
+            </div>
+        </div>
+        <div class="collection-card">
+            <div class="collection-bg baptism">
+                <div class="collection-icon">👼</div>
+            </div>
+            <div class="collection-overlay"></div>
+            <div class="collection-content">
+                <h3 class="collection-title">Chrzciny</h3>
+                <p class="collection-description">Delikatne zaproszenia na chrzciny, pamiątki i biżuteria dla dzieci</p>
+                <button class="collection-btn">Zobacz produkty</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section id="about" class="about-section">
+    <div class="about-content">
+        <div class="about-text">
+            <h2 class="about-title">O ElegantCards</h2>
+            <p class="about-description">
+                Od 10 lat specjalizujemy się w tworzeniu wyjątkowych zaproszeń i dodatków na różne uroczystości.
+                Każdy projekt wykonujemy z pasją i dbałością o najdrobniejsze detale, aby Twoje wydarzenie
+                było naprawdę niezapomniane. Oferujemy także piękną biżuterię i dodatki.
+            </p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number">2500+</div>
+                    <div class="stat-label">Zadowolonych klientów</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number blue">150+</div>
+                    <div class="stat-label">Unikalnych projektów</div>
+                </div>
+            </div>
+        </div>
+        <div class="about-visual">
+            <div class="about-circle">
+                <div class="about-inner">
+                    <div class="about-inner-icon">✨</div>
+                    <p class="about-inner-text">Wyjątkowe momenty</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <div class="footer-section">
+            <div class="logo">💌 ElegantCards</div>
+            <p>Tworzę wyjątkowe zaproszenia, i biżuterię. Do każdego zamówienia podchodzę indywidualnie</p>
+            <div class="social-links">
+                <a href="#" class="social-link">📘</a>
+                <a href="#" class="social-link">📷</a>
+                <a href="#" class="social-link">🐦</a>
+            </div>
+        </div>
+        <div class="footer-section">
+            <h3>Kategorie</h3>
+            <a href="#">Zaproszenia ślubne</a>
+            <a href="#">Kartki urodzinowe</a>
+            <a href="#">Zaproszenia na chrzciny</a>
+            <a href="#">Biżuteria</a>
+        </div>
+        <div class="footer-section">
+            <h3>Obsługa</h3>
+            <a href="#">Kontakt</a>
+            <a href="#">Dostawa</a>
+            <a href="#">Zwroty</a>
+            <a href="#">FAQ</a>
+        </div>
+        <div class="footer-section">
+            <h3>Informacje</h3>
+            <a href="#">O nas</a>
+            <a href="#">Polityka prywatności</a>
+            <a href="#">Regulamin</a>
+            <a href="#">Blog</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>&copy; 2024 ElegantCards. Wszystkie prawa zastrzeżone.</p>
+    </div>
+</footer>
+
+@if (showNotification)
+{
+    <div class="notification show">
+        @notificationMessage
+    </div>
+}
+
+@code {
+    private int cartCount = 0;
+    private bool showNotification = false;
+    private string notificationMessage = "";
+    private Timer? notificationTimer;
+
+    public class Product
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public decimal Price { get; set; }
+        public string Icon { get; set; } = "";
+    }
+
+    private readonly List<Product> products = new()
+    {
+        new Product { Id = 1, Name = "Zaproszenia Ślubne Elegance", Description = "Klasyczne zaproszenia z koronkowym wykończeniem", Price = 8.50m, Icon = "💌" },
+        new Product { Id = 2, Name = "Kartki Urodzinowe Floral", Description = "Kolorowe kartki z motywem kwiatowym", Price = 4.20m, Icon = "🎂" },
+        new Product { Id = 3, Name = "Zaproszenia na Chrzciny", Description = "Delikatne zaproszenia z motywem anielskim", Price = 6.80m, Icon = "👼" },
+        new Product { Id = 4, Name = "Bransoletka dla Panny Młodej", Description = "Elegancka bransoletka z perłami", Price = 150.00m, Icon = "💫" },
+        new Product { Id = 5, Name = "Kolczyki Ślubne", Description = "Delikatne kolczyki z kryształkami", Price = 85.00m, Icon = "💎" },
+        new Product { Id = 6, Name = "Menu Weselne Premium", Description = "Ekskluzywne menu z ozdobnym wykończeniem", Price = 12.00m, Icon = "🍽️" },
+        new Product { Id = 7, Name = "Winietki Personalizowane", Description = "Eleganckie winietki z imionami gości", Price = 3.50m, Icon = "🏷️" },
+        new Product { Id = 8, Name = "Pudełko na Koperty", Description = "Piękne pudełko na koperty ślubne", Price = 45.00m, Icon = "📦" }
+    };
+
+    private void AddToCart(int productId)
+    {
+        cartCount++;
+        var product = products.FirstOrDefault(p => p.Id == productId);
+        ShowNotification($"Dodano {product?.Name} do koszyka!");
+        StateHasChanged();
+    }
+
+    private void ShowCart()
+    {
+        ShowNotification($"Koszyk zawiera {cartCount} produktów");
+    }
+
+    private async void ShowNotification(string message)
+    {
+        notificationMessage = message;
+        showNotification = true;
+        StateHasChanged();
+
+        // Ukryj notyfikację po 3 sekundach
+        notificationTimer?.Dispose();
+        notificationTimer = new Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                showNotification = false;
+                StateHasChanged();
+            });
+        }, null, 3000, Timeout.Infinite);
+    }
+
+    public void Dispose()
+    {
+        notificationTimer?.Dispose();
+    }
+}

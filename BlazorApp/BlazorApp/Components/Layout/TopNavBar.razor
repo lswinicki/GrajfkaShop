@@ -1,21 +1,39 @@
-<div class="container">
-    <header class="d-flex justify-content-center justify-content-md-between flex-wrap py-3">
-        <NavLink href="/" class="text-light text-decoration-none fs-4 fw-bold">Grajfka</NavLink>
-        <ul class="nav">
-            <li>
-                <NavLink href="/" class="link-light nav-link">Strona startowa</NavLink>
-            </li>
-            <li>
-                <NavLink href="/about" class="link-light nav-link">O stronie</NavLink>
-            </li>
+<nav class="elegantcards-navbar">
+    <div class="elegantcards-nav-container">
+        <NavLink href="/" class="elegantcards-logo">💌 Grajfka</NavLink>
+
+        <ul class="elegantcards-nav-links">
+            <li><NavLink href="/" class="nav-link">Strona główna</NavLink></li>
+            <li><NavLink href="/products" class="nav-link">Produkty</NavLink></li>
+            <li><NavLink href="/collections" class="nav-link">Kategorie</NavLink></li>
+            <li><NavLink href="/about" class="nav-link">O nas</NavLink></li>
         </ul>
-        
-        <div class="text-end">
+
+        <div class="elegantcards-nav-actions">
+            <button class="elegantcards-nav-btn" @onclick="ShowSearch">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </button>
+            <button class="elegantcards-nav-btn" @onclick="ShowCart">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h8"></path>
+                </svg>
+                <span class="elegantcards-cart-count">1</span>
+            </button>
             <NavLink href="/login" class="btn btn-primary">Zaloguj się</NavLink>
         </div>
-    </header>
-</div>
+    </div>
+</nav>
 
 @code {
-    
+    private void ShowSearch()
+    {
+        // Logika wyszukiwania
+    }
+
+    private void ShowCart()
+    {
+        // Logika koszyka
+    }
 }
