@@ -1,6 +1,8 @@
 using Application.Common.Interfaces;
+using Application.Common.Interfaces.Repositories;
 using Domain.Entities;
 using Infrastructure.Persistance;
+using Infrastructure.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -21,6 +23,8 @@ public static class DependencyInjection
         services.AddIdentityCore<UserDao>()
             .AddRoles<IdentityRole<int>>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
+
+        services.AddScoped<IUserRepository, UserRepository>();
         
         return services;
     }
