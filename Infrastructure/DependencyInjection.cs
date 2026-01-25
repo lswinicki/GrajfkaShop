@@ -1,6 +1,7 @@
 using Application.Common.Interfaces;
 using Application.Common.Interfaces.Repositories;
 using Domain.Entities;
+using Infrastructure.ExceptionHandling;
 using Infrastructure.Persistance;
 using Infrastructure.Repositories;
 using Microsoft.AspNetCore.Identity;
@@ -25,7 +26,10 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<ApplicationDbContext>();
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
         
+        
+        services.AddExceptionHandler<GlobalExceptionHandler>();
         return services;
     }
 }
