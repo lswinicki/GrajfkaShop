@@ -1,0 +1,128 @@
+@page "/product/{Id:int}"
+@layout BlazorApp.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Application.Requests.Queries.Products.GetProductById
+@using Application.Requests.Queries.Products.Models
+@using Application.Services
+@inject MediatR.IMediator Mediator
+@inject CartService Cart
+
+<PageTitle>@(product?.Name ?? "Produkt") | Grajfka</PageTitle>
+
+@if (product == null)
+{
+    <div class="shop-loading" style="min-height: 50vh;"><div class="shop-spinner"></div> Ładowanie produktu...</div>
+}
+else
+{
+    <section class="shop-detail" style="padding-top: 2rem;">
+        <div class="shop-detail-grid">
+            @* Gallery *@
+            <div class="shop-detail-gallery">
+                <div class="shop-detail-main-img">
+                    @if (product.ImageUrls.Any())
+                    {
+                        <img src="@selectedImage" alt="@product.Name"
+                             style="transform-origin: var(--zoom-x, center) var(--zoom-y, center);"
+                             @onmousemove="OnImageMouseMove"
+                             @onmouseleave="OnImageMouseLeave" />
+                        <span class="zoom-hint">🔍 Najedź aby powiększyć</span>
+                    }
+                    else
+                    {
+                        <span style="font-size: 8rem;">💌</span>
+                    }
+                </div>
+                @if (product.ImageUrls.Count > 1)
+                {
+                    <div class="shop-detail-thumbs">
+                        @foreach (var img in product.ImageUrls)
+                        {
+                            <div class="shop-detail-thumb @(selectedImage == img ? "active" : "")"
+                                 @onclick="() => selectedImage = img">
+                                <img src="@img" alt="Miniatura"/>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            @* Info *@
+            <div class="shop-detail-info">
+                <div class="shop-detail-breadcrumb">
+                    <a href="/products">Produkty</a>
+                    <span>›</span>
+                    <a href="/products?category=@product.CategoryId">@product.CategoryName</a>
+                    <span>›</span>
+                    <span>@product.Name</span>
+                </div>
+
+                <h1 class="shop-detail-title">@product.Name</h1>
+                <div class="shop-detail-price">@product.Price.ToString("N2") zł</div>
+
+                <p class="shop-detail-desc">@product.Description</p>
+
+                <div class="shop-detail-actions">
+                    <button class="shop-btn shop-btn-primary" style="flex: 1;" @onclick="AddToCart">
+                        🛒 Dodaj do koszyka
+                    </button>
+                    <a href="/contact" class="shop-btn shop-btn-outline">
+                        ✉️ Zapytaj o produkt
+                    </a>
+                </div>
+
+                <ul class="shop-detail-features">
+                    <li><span>✨</span> Ręcznie wykonane z dbałością o detale</li>
+                    <li><span>📦</span> Wysyłka w ciągu 3-5 dni roboczych</li>
+                    <li><span>💎</span> Możliwość personalizacji</li>
+                    <li><span>🔄</span> 14 dni na zwrot</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+}
+
+@if (showNotification)
+{
+    <div style="position: fixed; top: 100px; right: 2rem; background: linear-gradient(135deg, #10b981, #059669); color: white;
+                padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3); z-index: 1001;
+                animation: shopFadeIn 0.3s ease;">
+        ✅ Dodano do koszyka!
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ProductDto? product;
+    private string selectedImage = "";
+    private bool showNotification;
+
+    protected override async Task OnInitializedAsync()
+    {
+        product = await Mediator.Send(new GetProductByIdQuery { Id = Id });
+        if (product?.ImageUrls.Any() == true)
+            selectedImage = product.ImageUrls.First();
+    }
+
+    private void OnImageMouseMove(MouseEventArgs e)
+    {
+        // The CSS handles the zoom via :hover on .shop-detail-main-img img
+    }
+
+    private void OnImageMouseLeave(MouseEventArgs e)
+    {
+    }
+
+    private async Task AddToCart()
+    {
+        if (product == null) return;
+        var imgUrl = product.ImageUrls.Any() ? product.ImageUrls.First() : null;
+        Cart.AddItem(product.Id, product.Name, product.Price, imgUrl);
+        showNotification = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        showNotification = false;
+        StateHasChanged();
+    }
+}

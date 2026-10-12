@@ -23,10 +23,21 @@ public static class DependencyInjection
 
         services.AddIdentityCore<UserDao>()
             .AddRoles<IdentityRole<int>>()
+            .AddSignInManager()
             .AddEntityFrameworkStores<ApplicationDbContext>();
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
+            options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+            options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+        }).AddIdentityCookies();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IContactMessageRepository, ContactMessageRepository>();
         
         
         services.AddExceptionHandler<GlobalExceptionHandler>();

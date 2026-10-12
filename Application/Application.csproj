@@ -21,12 +21,7 @@
       <ProjectReference Include="..\Domain\Domain.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Requests\Commands\OrderItem\" />
-      <Folder Include="Requests\Commands\Order\" />
-      <Folder Include="Requests\Commands\ProductImage\" />
-      <Folder Include="Requests\Commands\Products\" />
-      <Folder Include="Requests\Queries\" />
-    </ItemGroup>
+
+
 
 </Project>

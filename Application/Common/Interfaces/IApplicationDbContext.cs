@@ -11,4 +11,7 @@ public interface IApplicationDbContext
     DbSet<OrderItemDao> OrderItems { get; set; }
     DbSet<ProductImageDao> ProductImages { get; set; }
     DbSet<UserDao> Users { get; set; }
+    DbSet<ContactMessageDao> ContactMessages { get; set; }
+    
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

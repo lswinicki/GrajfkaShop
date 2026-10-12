@@ -1,0 +1,178 @@
+@page "/my-orders"
+@layout BlazorApp.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Application.Requests.Queries.Orders.GetOrdersByUser
+@using Application.Requests.Queries.Orders.Models
+@using Microsoft.AspNetCore.Identity
+@using Domain.Entities
+@using Microsoft.AspNetCore.Components.Authorization
+@inject MediatR.IMediator Mediator
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<UserDao> UserManager
+
+<PageTitle>Moje Zamówienia | Grajfka</PageTitle>
+
+<section class="shop-section" style="background: var(--shop-bg);">
+    <div class="shop-container" style="max-width: 900px;">
+        <div class="shop-section-header">
+            <h1 class="shop-heading-lg">Moje Zamówienia</h1>
+            <div class="shop-section-divider"></div>
+            <p class="shop-text-lg">Sprawdź historię i status swoich zamówień</p>
+        </div>
+
+        @if (!isAuthenticated)
+        {
+            <div class="shop-panel-card" style="text-align: center; padding: 4rem 2rem;">
+                <div style="font-size: 5rem; margin-bottom: 1rem;">🔒</div>
+                <h3 class="shop-heading-md" style="margin-bottom: 0.5rem;">Zaloguj się</h3>
+                <p class="shop-text" style="margin-bottom: 2rem;">Aby zobaczyć historię zamówień, musisz się zalogować.</p>
+                <a href="/login" class="shop-btn shop-btn-primary">🔑 Zaloguj się</a>
+            </div>
+        }
+        else if (orders == null)
+        {
+            <div class="shop-loading"><div class="shop-spinner"></div> Ładowanie zamówień...</div>
+        }
+        else if (!orders.Any())
+        {
+            <div class="shop-panel-card" style="text-align: center; padding: 4rem 2rem;">
+                <div style="font-size: 5rem; margin-bottom: 1rem;">🛍️</div>
+                <h3 class="shop-heading-md" style="margin-bottom: 0.5rem;">Brak zamówień</h3>
+                <p class="shop-text" style="margin-bottom: 2rem;">Nie masz jeszcze żadnych zamówień. Odkryj nasze produkty!</p>
+                <a href="/products" class="shop-btn shop-btn-primary">🛒 Przejdź do sklepu</a>
+            </div>
+        }
+        else
+        {
+            <div class="shop-panel-card">
+                <div class="shop-panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 class="shop-heading-md" style="margin: 0;">@orders.Count() zamówień</h3>
+                    @if (linkedGuestOrders > 0)
+                    {
+                        <span style="font-size: 0.8rem; color: var(--shop-rose);">
+                            ✨ Znaleziono @linkedGuestOrders zamówień jako gość
+                        </span>
+                    }
+                </div>
+                @foreach (var order in orders)
+                {
+                    <div class="shop-order-row" @onclick="() => ToggleOrder(order.Id)">
+                        <div>
+                            <div class="shop-order-id">
+                                #@order.Id
+                                @if (order.IsGuestOrder)
+                                {
+                                    <span style="font-size: 0.7rem; color: var(--shop-text-muted); font-weight: normal;"> (gość)</span>
+                                }
+                            </div>
+                            <div class="shop-order-date">@order.OrderDate.ToString("dd.MM.yyyy")</div>
+                        </div>
+                        <div>
+                            <span class="shop-badge shop-badge-@order.Status.ToLower()">
+                                @GetStatusLabel(order.Status)
+                            </span>
+                            <span class="shop-badge shop-badge-@order.PaymentStatus.ToLower()" style="margin-left: 0.5rem;">
+                                @GetPaymentLabel(order.PaymentStatus)
+                            </span>
+                        </div>
+                        <div class="shop-order-amount">@order.TotalAmount.ToString("N2") zł</div>
+                        <div style="color: var(--shop-text-muted); font-size: 0.9rem;">
+                            @(expandedOrderId == order.Id ? "▲" : "▼")
+                        </div>
+                    </div>
+
+                    @if (expandedOrderId == order.Id)
+                    {
+                        <div class="shop-order-detail-panel">
+                            @if (!string.IsNullOrEmpty(order.ShippingAddress))
+                            {
+                                <p style="font-size: 0.85rem; color: var(--shop-text-muted); margin-bottom: 0.75rem;">
+                                    📍 <strong>Adres:</strong> @order.ShippingAddress
+                                </p>
+                            }
+                            <ul class="shop-order-items">
+                                @foreach (var item in order.Items)
+                                {
+                                    <li>
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            @if (!string.IsNullOrEmpty(item.ProductImageUrl))
+                                            {
+                                                <img src="@item.ProductImageUrl" alt="" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;"/>
+                                            }
+                                            <span>@item.ProductName × @item.Quantity</span>
+                                        </div>
+                                        <strong>@((item.Price * item.Quantity).ToString("N2")) zł</strong>
+                                    </li>
+                                }
+                            </ul>
+                            @if (!string.IsNullOrEmpty(order.CustomerNotes))
+                            {
+                                <p style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--shop-text-muted);">
+                                    💬 @order.CustomerNotes
+                                </p>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private IEnumerable<OrderDto>? orders;
+    private int? expandedOrderId;
+    private bool isAuthenticated;
+    private int linkedGuestOrders;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            isAuthenticated = false;
+            return;
+        }
+
+        isAuthenticated = true;
+
+        var appUser = await UserManager.GetUserAsync(user);
+        if (appUser == null) return;
+
+        var result = await Mediator.Send(new GetOrdersByUserQuery
+        {
+            UserId = appUser.Id,
+            Email = appUser.Email
+        });
+
+        orders = result.ToList();
+        linkedGuestOrders = orders.Count(o => o.IsGuestOrder);
+    }
+
+    private void ToggleOrder(int orderId)
+    {
+        expandedOrderId = expandedOrderId == orderId ? null : orderId;
+    }
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "New" => "Nowe",
+        "Pending" => "W realizacji",
+        "Approved" => "Wysłano",
+        "Done" => "Dostarczone",
+        "Cancelled" => "Anulowane",
+        _ => status
+    };
+
+    private string GetPaymentLabel(string status) => status switch
+    {
+        "Pending" => "Oczekuje",
+        "Paid" => "Opłacone",
+        "Failed" => "Nieudane",
+        "Refunded" => "Zwrócone",
+        _ => status
+    };
+}

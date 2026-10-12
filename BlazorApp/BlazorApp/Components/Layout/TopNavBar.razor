@@ -1,39 +1,175 @@
+@rendermode InteractiveServer
+@using Application.Services
+@using BlazorApp.Providers
+@using Microsoft.AspNetCore.Components.Authorization
+@inject CartService Cart
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
+
 <nav class="elegantcards-navbar">
     <div class="elegantcards-nav-container">
         <NavLink href="/" class="elegantcards-logo">💌 Grajfka</NavLink>
 
-        <ul class="elegantcards-nav-links">
-            <li><NavLink href="/" class="nav-link">Strona główna</NavLink></li>
-            <li><NavLink href="/products" class="nav-link">Produkty</NavLink></li>
-            <li><NavLink href="/collections" class="nav-link">Kategorie</NavLink></li>
-            <li><NavLink href="/about" class="nav-link">O nas</NavLink></li>
+        @* Mobile hamburger *@
+        <button class="shop-nav-hamburger" @onclick="() => mobileMenuOpen = !mobileMenuOpen">
+            @(mobileMenuOpen ? "✕" : "☰")
+        </button>
+
+        <ul class="elegantcards-nav-links @(mobileMenuOpen ? "open" : "")">
+            <li>
+                <NavLink href="/" class="nav-link" Match="NavLinkMatch.All" @onclick="CloseMenu">Strona główna</NavLink>
+            </li>
+            <li>
+                <NavLink href="/products" class="nav-link" @onclick="CloseMenu">Produkty</NavLink>
+            </li>
+            <li>
+                <NavLink href="/contact" class="nav-link" @onclick="CloseMenu">Kontakt</NavLink>
+            </li>
         </ul>
 
         <div class="elegantcards-nav-actions">
-            <button class="elegantcards-nav-btn" @onclick="ShowSearch">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-            </button>
-            <button class="elegantcards-nav-btn" @onclick="ShowCart">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h8"></path>
-                </svg>
-                <span class="elegantcards-cart-count">1</span>
-            </button>
-            <NavLink href="/login" class="btn btn-primary">Zaloguj się</NavLink>
+            <a href="/cart" class="shop-nav-cart-btn" title="Koszyk">
+                🛒
+                @if (Cart.ItemCount > 0)
+                {
+                    <span class="shop-nav-cart-badge">@Cart.ItemCount</span>
+                }
+            </a>
+
+            <AuthorizeView>
+                <Authorized>
+                    <div class="shop-profile-dropdown-wrap">
+                        <button class="shop-profile-trigger" @onclick="ToggleProfileMenu">
+                            <span class="shop-profile-trigger-avatar">@userInitial</span>
+                        </button>
+
+                        @if (profileMenuOpen)
+                        {
+                            <div class="shop-profile-dropdown">
+                                <div class="shop-profile-dropdown-header">
+                                    @if (!string.IsNullOrEmpty(userName))
+                                    {
+                                        <span class="shop-profile-dropdown-name">@userName</span>
+                                    }
+                                    <span class="shop-profile-dropdown-email">@userEmail</span>
+                                </div>
+                                @if (context.User.IsInRole("Admin"))
+                                {
+                                    <a href="/admin/orders" class="shop-profile-dropdown-item" @onclick="CloseAll">
+                                        📋 Zamówienia
+                                    </a>
+                                    <a href="/admin/categories" class="shop-profile-dropdown-item" @onclick="CloseAll">
+                                        ⚙️ Kategorie
+                                    </a>
+                                    <a href="/admin/products" class="shop-profile-dropdown-item" @onclick="CloseAll">
+                                        ⚙️ Produkty
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a href="/moje-konto" class="shop-profile-dropdown-item" @onclick="CloseAll">
+                                        📋 Moje zamówienia
+                                    </a>
+                                    <a href="/moje-konto" class="shop-profile-dropdown-item" @onclick="CloseAll">
+                                        ⚙️ Ustawienia konta
+                                    </a>
+                                }
+
+                                <div class="shop-profile-dropdown-divider"></div>
+
+                                <a @onclick="Logout" style="cursor: pointer; user-select: none;" class="shop-profile-dropdown-item shop-profile-dropdown-logout">
+                                    🚪 Wyloguj się
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/login" class="shop-btn shop-btn-primary"
+                       style="padding: 0.5rem 1.25rem; font-size: 0.85rem;">
+                        Zaloguj się
+                    </a>
+                </NotAuthorized>
+            </AuthorizeView>
+
         </div>
     </div>
 </nav>
 
+@* Click-outside overlay *@
+@if (profileMenuOpen)
+{
+    <div class="shop-profile-overlay" @onclick="() => profileMenuOpen = false"></div>
+}
+
 @code {
-    private void ShowSearch()
+    private bool mobileMenuOpen;
+    private bool profileMenuOpen;
+    private bool isAuthenticated;
+    private string userInitial = "U";
+    private string userName = "";
+    private string userEmail = "";
+
+    protected override async Task OnInitializedAsync()
     {
-        // Logika wyszukiwania
+        Cart.OnChange += StateHasChanged;
+        await CheckAuth();
     }
 
-    private void ShowCart()
+    private async Task CheckAuth()
     {
-        // Logika koszyka
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            isAuthenticated = user.Identity?.IsAuthenticated == true;
+            if (isAuthenticated)
+            {
+                var nameClaim = user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                userEmail = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? user.Identity?.Name ?? "";
+
+                userName = nameClaim == userEmail ? "" : (nameClaim ?? "");
+                userInitial = !string.IsNullOrEmpty(userName) ? userName.Substring(0, 1).ToUpper() : (!string.IsNullOrEmpty(userEmail) ? userEmail.Substring(0, 1).ToUpper() : "U");
+            }
+        }
+        catch
+        {
+            /* non-critical */
+        }
     }
+
+    private void ToggleProfileMenu()
+    {
+        profileMenuOpen = !profileMenuOpen;
+    }
+
+    private void CloseMenu()
+    {
+        mobileMenuOpen = false;
+    }
+
+    private void CloseAll()
+    {
+        mobileMenuOpen = false;
+        profileMenuOpen = false;
+    }
+
+    private async Task Logout()
+    {
+        CloseAll();
+
+        if (AuthStateProvider is CustomAuthenticationStateProvider customAuthenticationStateProvider)
+        {
+            await customAuthenticationStateProvider.MarkUserAsLoggedOut();
+        }
+        
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        Cart.OnChange -= StateHasChanged;
+    }
+
 }

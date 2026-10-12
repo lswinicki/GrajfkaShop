@@ -1,0 +1,212 @@
+@page "/admin/categories"
+@layout BlazorApp.Components.Layout.AdminLayout
+@rendermode InteractiveServer
+@using Application.Requests.Commands.Category.Add
+@using Application.Requests.Commands.Category.Update
+@using Application.Requests.Commands.Category.Delete
+@using Application.Requests.Commands.Category.Models
+@using Application.Requests.Queries.Categories.GetAllCategories
+@inject MediatR.IMediator Mediator
+
+<PageTitle>Panel Admina - Kategorie</PageTitle>
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-page-title">Kategorie</h1>
+        <p class="admin-page-subtitle">Zarządzaj kategoriami produktów</p>
+    </div>
+</div>
+
+@if (alertMessage != null)
+{
+    <div class="admin-alert @(alertIsError ? "admin-alert-danger" : "admin-alert-success")">@alertMessage</div>
+}
+
+<div class="admin-card" style="margin-bottom: 1.5rem;">
+    <div class="admin-card-header">
+        <h3 class="admin-card-title">@(editingCategory != null ? "✏️ Edytuj kategorię" : "➕ Dodaj nową kategorię")</h3>
+        @if (editingCategory != null)
+        {
+            <button class="admin-btn admin-btn-outline admin-btn-sm" @onclick="CancelEdit">Anuluj edycję</button>
+        }
+    </div>
+    <div class="admin-card-body">
+        <div class="admin-inline-form">
+            <div class="admin-form-group" style="flex: 2;">
+                <label class="admin-form-label">Nazwa *</label>
+                <input type="text" class="admin-form-control" @bind="formName" placeholder="Np. Zaproszenia Ślubne"/>
+            </div>
+            <div class="admin-form-group" style="flex: 3;">
+                <label class="admin-form-label">Opis</label>
+                <input type="text" class="admin-form-control" @bind="formDescription" placeholder="Krótki opis kategorii"/>
+            </div>
+            <div class="admin-form-group" style="flex: 0 0 auto;">
+                <label class="admin-form-label">&nbsp;</label>
+                <button class="admin-btn admin-btn-primary" @onclick="SaveCategory">
+                    @(editingCategory != null ? "💾 Zapisz" : "➕ Dodaj")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (categories == null)
+{
+    <div class="admin-loading"><div class="admin-spinner"></div> Ładowanie...</div>
+}
+else
+{
+    <div class="admin-card">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nazwa</th>
+                    <th>Opis</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!categories.Any())
+                {
+                    <tr>
+                        <td colspan="4">
+                            <div class="admin-empty">
+                                <div class="admin-empty-icon">🏷️</div>
+                                <p>Brak kategorii. Dodaj pierwszą!</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @foreach (var cat in categories)
+                {
+                    <tr>
+                        <td>@cat.Id</td>
+                        <td><strong>@cat.Name</strong></td>
+                        <td style="color: var(--admin-text-muted);">@(cat.Description ?? "—")</td>
+                        <td>
+                            <button class="admin-btn admin-btn-outline admin-btn-sm" @onclick="() => StartEdit(cat)">✏️ Edytuj</button>
+                            <button class="admin-btn admin-btn-danger admin-btn-sm" @onclick="() => ConfirmDelete(cat)">🗑️ Usuń</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (categoryToDelete != null)
+{
+    <div class="admin-modal-backdrop" @onclick="CancelDelete">
+        <div class="admin-modal" @onclick:stopPropagation>
+            <div class="admin-modal-header">
+                <h3 class="admin-modal-title">Potwierdzenie usunięcia</h3>
+                <button class="admin-modal-close" @onclick="CancelDelete">✕</button>
+            </div>
+            <div class="admin-modal-body">
+                <p>Czy na pewno chcesz usunąć kategorię <strong>@categoryToDelete.Name</strong>?</p>
+                <p style="color: var(--admin-text-muted); font-size: 0.85rem;">Produkty w tej kategorii mogą stracić przypisanie.</p>
+            </div>
+            <div class="admin-modal-footer">
+                <button class="admin-btn admin-btn-outline" @onclick="CancelDelete">Anuluj</button>
+                <button class="admin-btn admin-btn-danger" @onclick="DeleteCategory" style="background: var(--admin-danger); color: white;">Usuń</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private IEnumerable<CategoryDto>? categories;
+    private CategoryDto? editingCategory;
+    private CategoryDto? categoryToDelete;
+    private string formName = "";
+    private string? formDescription;
+    private string? alertMessage;
+    private bool alertIsError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        categories = await Mediator.Send(new GetAllCategoriesQuery());
+    }
+
+    private void StartEdit(CategoryDto cat)
+    {
+        editingCategory = cat;
+        formName = cat.Name;
+        formDescription = cat.Description;
+    }
+
+    private void CancelEdit()
+    {
+        editingCategory = null;
+        formName = "";
+        formDescription = null;
+    }
+
+    private async Task SaveCategory()
+    {
+        if (string.IsNullOrWhiteSpace(formName))
+        {
+            alertMessage = "Nazwa kategorii jest wymagana.";
+            alertIsError = true;
+            return;
+        }
+
+        try
+        {
+            if (editingCategory != null)
+            {
+                await Mediator.Send(new UpdateCategoryCommand
+                {
+                    Id = editingCategory.Id,
+                    Name = formName,
+                    Description = formDescription
+                });
+                alertMessage = $"Kategoria \"{formName}\" została zaktualizowana.";
+                editingCategory = null;
+            }
+            else
+            {
+                await Mediator.Send(new AddCategoryCommand { Name = formName });
+                alertMessage = $"Kategoria \"{formName}\" została dodana.";
+            }
+
+            alertIsError = false;
+            formName = "";
+            formDescription = null;
+            await LoadCategories();
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Błąd: {ex.Message}";
+            alertIsError = true;
+        }
+    }
+
+    private void ConfirmDelete(CategoryDto cat) => categoryToDelete = cat;
+    private void CancelDelete() => categoryToDelete = null;
+
+    private async Task DeleteCategory()
+    {
+        if (categoryToDelete == null) return;
+        try
+        {
+            await Mediator.Send(new DeleteCategoryCommand { Id = categoryToDelete.Id });
+            alertMessage = $"Kategoria \"{categoryToDelete.Name}\" została usunięta.";
+            alertIsError = false;
+            categoryToDelete = null;
+            await LoadCategories();
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Błąd: {ex.Message}";
+            alertIsError = true;
+            categoryToDelete = null;
+        }
+    }
+}

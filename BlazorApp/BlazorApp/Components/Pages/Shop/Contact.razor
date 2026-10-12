@@ -1,0 +1,147 @@
+@page "/contact"
+@layout BlazorApp.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Application.Requests.Commands.Contact.Send
+@inject MediatR.IMediator Mediator
+
+<PageTitle>Kontakt | Grajfka</PageTitle>
+
+<section class="shop-section" style="background: var(--shop-bg);">
+    <div class="shop-container">
+        <div class="shop-section-header">
+            <h1 class="shop-heading-lg">Kontakt</h1>
+            <div class="shop-section-divider"></div>
+            <p class="shop-text-lg">Masz pytania? Chętnie pomożemy!</p>
+        </div>
+
+        @if (alertMessage != null)
+        {
+            <div class="shop-alert @(alertIsError ? "shop-alert-error" : "shop-alert-success")" style="max-width: 700px; margin: 0 auto 2rem;">
+                @alertMessage
+            </div>
+        }
+
+        <div class="shop-contact-grid" style="max-width: 900px; margin: 0 auto;">
+            @* Contact Info *@
+            <div>
+                <div class="shop-contact-info-item">
+                    <span class="shop-contact-info-icon">📍</span>
+                    <div class="shop-contact-info-text">
+                        <h4>Adres</h4>
+                        <p>ul. Kwiatowa 15, 00-001 Warszawa</p>
+                    </div>
+                </div>
+                <div class="shop-contact-info-item">
+                    <span class="shop-contact-info-icon">📧</span>
+                    <div class="shop-contact-info-text">
+                        <h4>Email</h4>
+                        <p>kontakt@grajfka.pl</p>
+                    </div>
+                </div>
+                <div class="shop-contact-info-item">
+                    <span class="shop-contact-info-icon">📱</span>
+                    <div class="shop-contact-info-text">
+                        <h4>Telefon</h4>
+                        <p>+48 123 456 789</p>
+                    </div>
+                </div>
+                <div class="shop-contact-info-item">
+                    <span class="shop-contact-info-icon">🕐</span>
+                    <div class="shop-contact-info-text">
+                        <h4>Godziny otwarcia</h4>
+                        <p>Pon-Pt: 9:00 - 17:00<br/>Sob: 10:00 - 14:00</p>
+                    </div>
+                </div>
+            </div>
+
+            @* Contact Form *@
+            <div class="shop-contact-card">
+                <h3 class="shop-heading-md" style="margin-bottom: 1.5rem;">Napisz do nas</h3>
+
+                <div class="shop-form-group">
+                    <label class="shop-form-label">Imię i nazwisko *</label>
+                    <input type="text" class="shop-form-control" @bind="formName" placeholder="Anna Kowalska"/>
+                </div>
+
+                <div class="shop-form-group">
+                    <label class="shop-form-label">Email *</label>
+                    <input type="email" class="shop-form-control" @bind="formEmail" placeholder="anna@email.com"/>
+                </div>
+
+                <div class="shop-form-group">
+                    <label class="shop-form-label">Temat *</label>
+                    <input type="text" class="shop-form-control" @bind="formSubject" placeholder="W czym możemy pomóc?"/>
+                </div>
+
+                <div class="shop-form-group">
+                    <label class="shop-form-label">Wiadomość *</label>
+                    <textarea class="shop-form-control" @bind="formMessage" placeholder="Opisz swoje pytanie lub zamówienie..."></textarea>
+                </div>
+
+                <button class="shop-btn shop-btn-primary" style="width: 100%;" @onclick="SendMessage" disabled="@isSending">
+                    @if (isSending)
+                    {
+                        <div class="shop-spinner" style="width: 16px; height: 16px;"></div>
+                    }
+                    ✉️ Wyślij wiadomość
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* Floating WhatsApp button *@
+<a href="https://wa.me/48123456789?text=Witam%2C%20chciałbym%20zapytać%20o%20produkty%20w%20sklepie%20Grajfka" 
+   target="_blank" class="shop-whatsapp-float">
+    💬
+    <span class="shop-whatsapp-tooltip">Napisz na WhatsApp</span>
+</a>
+
+@code {
+    private string formName = "";
+    private string formEmail = "";
+    private string formSubject = "";
+    private string formMessage = "";
+    private bool isSending;
+    private string? alertMessage;
+    private bool alertIsError;
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(formName) || string.IsNullOrWhiteSpace(formEmail)
+            || string.IsNullOrWhiteSpace(formSubject) || string.IsNullOrWhiteSpace(formMessage))
+        {
+            alertMessage = "Proszę wypełnić wszystkie pola.";
+            alertIsError = true;
+            return;
+        }
+
+        isSending = true;
+        try
+        {
+            await Mediator.Send(new SendContactMessageCommand
+            {
+                Name = formName,
+                Email = formEmail,
+                Subject = formSubject,
+                Message = formMessage
+            });
+
+            alertMessage = "Dziękujemy! Twoja wiadomość została wysłana. Odpiszemy najszybciej jak to możliwe.";
+            alertIsError = false;
+            formName = "";
+            formEmail = "";
+            formSubject = "";
+            formMessage = "";
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Wystąpił błąd: {ex.Message}";
+            alertIsError = true;
+        }
+        finally
+        {
+            isSending = false;
+        }
+    }
+}

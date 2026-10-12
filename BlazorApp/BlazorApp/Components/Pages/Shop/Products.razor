@@ -1,0 +1,270 @@
+@page "/products"
+@layout BlazorApp.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Application.Requests.Queries.Products.GetAllProducts
+@using Application.Requests.Queries.Products.Models
+@using Application.Requests.Queries.Categories.GetAllCategories
+@using Application.Requests.Commands.Category.Models
+@inject MediatR.IMediator Mediator
+
+<PageTitle>Produkty | Grajfka</PageTitle>
+
+<section class="shop-section" style="background: var(--shop-bg); padding-top: 1.5rem;">
+    <div class="shop-container">
+
+        @* === Search Bar === *@
+        <div class="shop-search-bar">
+            <span class="shop-search-icon">🔍</span>
+            <input type="text" class="shop-search-input" placeholder="Szukaj produktów..."
+                   @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp"/>
+            @if (!string.IsNullOrEmpty(searchTerm))
+            {
+                <button class="shop-search-clear" @onclick="ClearSearch">✕</button>
+            }
+        </div>
+
+        @* === Filters Row === *@
+        <div class="shop-filters">
+            @* Mobile filter toggle *@
+            <button class="shop-filter-toggle" @onclick="() => showFilters = !showFilters">
+                🎛️ Filtry @(activeFilterCount > 0 ? $"({activeFilterCount})" : "")
+                <span class="shop-filter-chevron @(showFilters ? "open" : "")">▼</span>
+            </button>
+
+            <div class="shop-filters-panel @(showFilters ? "show" : "")">
+                @* Category pills *@
+                <div class="shop-filter-section">
+                    <label class="shop-filter-label">Kategoria</label>
+                    <div class="shop-category-pills">
+                        <button class="shop-pill @(selectedCategoryId == null ? "active" : "")"
+                                @onclick="() => FilterByCategory(null)">
+                            Wszystkie
+                        </button>
+                        @if (categories != null)
+                        {
+                            @foreach (var cat in categories)
+                            {
+                                <button class="shop-pill @(selectedCategoryId == cat.Id ? "active" : "")"
+                                        @onclick="() => FilterByCategory(cat.Id)">
+                                    @GetCategoryIcon(cat.Name) @cat.Name
+                                </button>
+                            }
+                        }
+                    </div>
+                </div>
+
+                @* Price range *@
+                <div class="shop-filter-section">
+                    <label class="shop-filter-label">Cena</label>
+                    <div class="shop-price-filter">
+                        <div class="shop-price-input-wrap">
+                            <span class="shop-price-label">Od</span>
+                            <input type="number" class="shop-price-input" placeholder="0"
+                                   @bind="minPrice" min="0" step="1"/>
+                            <span class="shop-price-currency">zł</span>
+                        </div>
+                        <span class="shop-price-dash">—</span>
+                        <div class="shop-price-input-wrap">
+                            <span class="shop-price-label">Do</span>
+                            <input type="number" class="shop-price-input" placeholder="∞"
+                                   @bind="maxPrice" min="0" step="1"/>
+                            <span class="shop-price-currency">zł</span>
+                        </div>
+                        <button class="shop-btn shop-btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" @onclick="ApplyFilters">
+                            Filtruj
+                        </button>
+                    </div>
+                </div>
+
+                @* Quick price ranges *@
+                <div class="shop-filter-section">
+                    <div class="shop-price-quick">
+                        <button class="shop-pill-sm @(IsQuickPrice(0, 10) ? "active" : "")" @onclick="() => SetQuickPrice(0, 10)">do 10 zł</button>
+                        <button class="shop-pill-sm @(IsQuickPrice(10, 50) ? "active" : "")" @onclick="() => SetQuickPrice(10, 50)">10-50 zł</button>
+                        <button class="shop-pill-sm @(IsQuickPrice(50, 100) ? "active" : "")" @onclick="() => SetQuickPrice(50, 100)">50-100 zł</button>
+                        <button class="shop-pill-sm @(IsQuickPrice(100, null) ? "active" : "")" @onclick="() => SetQuickPrice(100, null)">100+ zł</button>
+                    </div>
+                </div>
+
+                @* Clear all *@
+                @if (activeFilterCount > 0)
+                {
+                    <button class="shop-clear-filters" @onclick="ClearAllFilters">
+                        ✕ Wyczyść filtry
+                    </button>
+                }
+            </div>
+        </div>
+
+        @* === Results count === *@
+        @if (products != null)
+        {
+            <div class="shop-results-info">
+                <span>@totalCount @GetProductWord(totalCount)</span>
+                @if (activeFilterCount > 0)
+                {
+                    <span class="shop-results-filter-hint"> (filtrowanie aktywne)</span>
+                }
+            </div>
+        }
+
+        @* === Product Grid === *@
+        @if (products == null)
+        {
+            <div class="shop-loading"><div class="shop-spinner"></div> Ładowanie...</div>
+        }
+        else if (!products.Any())
+        {
+            <div class="shop-empty-state">
+                <div class="shop-empty-icon">🔍</div>
+                <h3 class="shop-heading-md">Brak wyników</h3>
+                <p class="shop-text">Spróbuj zmienić filtry lub wyszukaj coś innego</p>
+                <button class="shop-btn shop-btn-outline" @onclick="ClearAllFilters" style="margin-top: 1rem;">
+                    Wyczyść wszystkie filtry
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="shop-products-grid">
+                @foreach (var product in products)
+                {
+                    <a href="/product/@product.Id" class="shop-product-card">
+                        <div class="shop-product-img-wrap">
+                            @if (product.ImageUrls.Any())
+                            {
+                                <img src="@product.ImageUrls.First()" alt="@product.Name" loading="lazy"/>
+                            }
+                            else
+                            {
+                                <span class="shop-product-placeholder-icon">@GetCategoryIcon(product.CategoryName)</span>
+                            }
+                        </div>
+                        <div class="shop-product-body">
+                            <div class="shop-product-category">@product.CategoryName</div>
+                            <h3 class="shop-product-name">@product.Name</h3>
+                            <p class="shop-product-desc">@product.Description</p>
+                            <div class="shop-product-footer">
+                                <span class="shop-product-price">@product.Price.ToString("N2") zł</span>
+                                <span class="shop-product-cart-btn">Sprawdź →</span>
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private IEnumerable<ProductDto>? products;
+    private IEnumerable<CategoryDto>? categories;
+    private int? selectedCategoryId;
+    private string searchTerm = "";
+    private decimal? minPrice;
+    private decimal? maxPrice;
+    private int totalCount;
+    private bool showFilters;
+    private System.Timers.Timer? debounceTimer;
+
+    private int activeFilterCount =>
+        (selectedCategoryId.HasValue ? 1 : 0)
+        + (!string.IsNullOrEmpty(searchTerm) ? 1 : 0)
+        + (minPrice.HasValue ? 1 : 0)
+        + (maxPrice.HasValue ? 1 : 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await Mediator.Send(new GetAllCategoriesQuery());
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        var result = await Mediator.Send(new GetAllProductsQuery
+        {
+            CategoryId = selectedCategoryId,
+            SearchTerm = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+            MinPrice = minPrice,
+            MaxPrice = maxPrice,
+            ActiveOnly = true
+        });
+        products = result.Products;
+        totalCount = result.TotalCount;
+    }
+
+    private async Task FilterByCategory(int? categoryId)
+    {
+        selectedCategoryId = categoryId;
+        await LoadProducts();
+    }
+
+    private async Task ApplyFilters()
+    {
+        await LoadProducts();
+    }
+
+    private void OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        debounceTimer?.Stop();
+        debounceTimer?.Dispose();
+        debounceTimer = new System.Timers.Timer(400);
+        debounceTimer.Elapsed += async (_, _) =>
+        {
+            debounceTimer?.Stop();
+            await InvokeAsync(async () =>
+            {
+                await LoadProducts();
+                StateHasChanged();
+            });
+        };
+        debounceTimer.AutoReset = false;
+        debounceTimer.Start();
+    }
+
+    private async Task ClearSearch()
+    {
+        searchTerm = "";
+        await LoadProducts();
+    }
+
+    private async Task ClearAllFilters()
+    {
+        searchTerm = "";
+        selectedCategoryId = null;
+        minPrice = null;
+        maxPrice = null;
+        await LoadProducts();
+    }
+
+    private async Task SetQuickPrice(decimal? min, decimal? max)
+    {
+        minPrice = min;
+        maxPrice = max;
+        await LoadProducts();
+    }
+
+    private bool IsQuickPrice(decimal? min, decimal? max)
+        => minPrice == min && maxPrice == max;
+
+    private string GetProductWord(int count) => count switch
+    {
+        1 => "produkt",
+        var n when n >= 2 && n <= 4 => "produkty",
+        _ => "produktów"
+    };
+
+    private string GetCategoryIcon(string name) => name.ToLower() switch
+    {
+        var n when n.Contains("ślub") => "💒",
+        var n when n.Contains("komunij") => "⛪",
+        var n when n.Contains("urodzin") => "🎂",
+        var n when n.Contains("biżuter") => "💎",
+        _ => "💌"
+    };
+
+    public void Dispose()
+    {
+        debounceTimer?.Dispose();
+    }
+}

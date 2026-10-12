@@ -1,0 +1,272 @@
+@page "/checkout"
+@layout BlazorApp.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Application.Services
+@using Application.Requests.Commands.Order.PlaceOrder
+@using Application.Requests.Commands.Order.LinkGuest
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@using Domain.Entities
+@inject CartService Cart
+@inject MediatR.IMediator Mediator
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<UserDao> UserManager
+
+<PageTitle>Realizacja zamówienia | Grajfka</PageTitle>
+
+<section class="shop-section" style="background: var(--shop-bg);">
+    <div class="shop-container" style="max-width: 900px;">
+        <div class="shop-section-header">
+            <h1 class="shop-heading-lg">Realizacja zamówienia</h1>
+            <div class="shop-section-divider"></div>
+        </div>
+
+        @if (!Cart.Items.Any())
+        {
+            <div class="shop-panel-card" style="text-align: center; padding: 3rem;">
+                <p class="shop-text-lg">Twój koszyk jest pusty.</p>
+                <a href="/products" class="shop-btn shop-btn-primary" style="margin-top: 1rem;">Przejdź do sklepu</a>
+            </div>
+        }
+        else if (!checkoutMode.HasValue)
+        {
+            @* Step 1: Choose guest or login *@
+            <div class="shop-checkout-choice">
+                <div class="shop-checkout-choice-card" @onclick="() => ChooseMode(false)">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">👤</div>
+                    <h3 class="shop-heading-md">Kontynuuj jako gość</h3>
+                    <p class="shop-text" style="margin: 0.5rem 0 1.5rem;">Zakupy bez rejestracji — podasz dane do wysyłki w następnym kroku</p>
+                    <span class="shop-btn shop-btn-outline">Kontynuuj →</span>
+                </div>
+                <div class="shop-checkout-choice-card" @onclick="GoToLogin">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔑</div>
+                    <h3 class="shop-heading-md">Zaloguj się</h3>
+                    <p class="shop-text" style="margin: 0.5rem 0 1.5rem;">Szybciej kupuj, śledź zamówienia i korzystaj z historii</p>
+                    <span class="shop-btn shop-btn-primary">Zaloguj się →</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            @* Step 2: Shipping form + order summary *@
+            <div class="shop-checkout-grid">
+                <div>
+                    <div class="shop-panel-card" style="padding: 2rem;">
+                        <h3 class="shop-heading-md" style="margin-bottom: 1.5rem;">
+                            @(isLoggedIn ? "📦 Dane do wysyłki" : "👤 Dane gościa i wysyłka")
+                        </h3>
+
+                        @if (alertMessage != null)
+                        {
+                            <div class="shop-alert @(alertIsError ? "shop-alert-error" : "shop-alert-success")">@alertMessage</div>
+                        }
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="shop-form-group">
+                                <label class="shop-form-label">Imię *</label>
+                                <input type="text" class="shop-form-control" @bind="firstName" placeholder="Anna"/>
+                            </div>
+                            <div class="shop-form-group">
+                                <label class="shop-form-label">Nazwisko *</label>
+                                <input type="text" class="shop-form-control" @bind="lastName" placeholder="Kowalska"/>
+                            </div>
+                        </div>
+
+                        @if (!isLoggedIn)
+                        {
+                            <div class="shop-form-group">
+                                <label class="shop-form-label">Email *</label>
+                                <input type="email" class="shop-form-control" @bind="email" placeholder="anna@email.com"/>
+                            </div>
+                        }
+
+                        <div class="shop-form-group">
+                            <label class="shop-form-label">Telefon *</label>
+                            <input type="tel" class="shop-form-control" @bind="phone" placeholder="+48 123 456 789"/>
+                        </div>
+
+                        <div class="shop-form-group">
+                            <label class="shop-form-label">Adres wysyłki *</label>
+                            <input type="text" class="shop-form-control" @bind="address" placeholder="ul. Kwiatowa 15"/>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="shop-form-group">
+                                <label class="shop-form-label">Kod pocztowy *</label>
+                                <input type="text" class="shop-form-control" @bind="postalCode" placeholder="00-001"/>
+                            </div>
+                            <div class="shop-form-group">
+                                <label class="shop-form-label">Miasto *</label>
+                                <input type="text" class="shop-form-control" @bind="city" placeholder="Warszawa"/>
+                            </div>
+                        </div>
+
+                        <div class="shop-form-group">
+                            <label class="shop-form-label">Uwagi do zamówienia</label>
+                            <textarea class="shop-form-control" @bind="notes" placeholder="Np. personalizacja, dedykacja, dodatkowe informacje..." style="min-height: 80px;"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                @* Order summary sidebar *@
+                <div>
+                    <div class="shop-panel-card" style="padding: 1.5rem; position: sticky; top: 2rem;">
+                        <h3 class="shop-heading-md" style="margin-bottom: 1rem;">Podsumowanie</h3>
+                        @foreach (var item in Cart.Items)
+                        {
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--shop-border); font-size: 0.85rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                    {
+                                        <img src="@item.ImageUrl" style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover;" alt=""/>
+                                    }
+                                    <span>@item.ProductName ×@item.Quantity</span>
+                                </div>
+                                <strong>@((item.Price * item.Quantity).ToString("N2")) zł</strong>
+                            </div>
+                        }
+                        <div style="display: flex; justify-content: space-between; padding: 1rem 0 0; font-family: var(--font-display); font-size: 1.25rem; font-weight: 700;">
+                            <span>Razem</span>
+                            <span class="shop-gradient-text">@Cart.Total.ToString("N2") zł</span>
+                        </div>
+
+                        <button class="shop-btn shop-btn-primary" style="width: 100%; margin-top: 1.25rem;" @onclick="PlaceOrder" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <div class="shop-spinner" style="width: 16px; height: 16px;"></div>
+                            }
+                            🛒 Złóż zamówienie
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private bool? checkoutMode; // null = choosing, false = guest, true = logged in
+    private bool isLoggedIn;
+    private int? currentUserId;
+
+    private string firstName = "";
+    private string lastName = "";
+    private string email = "";
+    private string phone = "";
+    private string address = "";
+    private string postalCode = "";
+    private string city = "";
+    private string notes = "";
+    private bool isSubmitting;
+    private string? alertMessage;
+    private bool alertIsError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            var user = await UserManager.GetUserAsync(authState.User);
+            if (user != null)
+            {
+                isLoggedIn = true;
+                currentUserId = user.Id;
+                firstName = user.FirstName;
+                lastName = user.LastName;
+                email = user.Email ?? "";
+                phone = user.PhoneNumber ?? "";
+                checkoutMode = true; // skip choice, go straight to form
+            }
+        }
+    }
+
+    private void ChooseMode(bool loggedIn)
+    {
+        checkoutMode = loggedIn;
+    }
+
+    private void GoToLogin()
+    {
+        Navigation.NavigateTo("/login?returnUrl=/checkout");
+    }
+
+    private async Task PlaceOrder()
+    {
+        // Validate
+        if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
+        {
+            alertMessage = "Proszę podać imię i nazwisko.";
+            alertIsError = true;
+            return;
+        }
+        if (!isLoggedIn && string.IsNullOrWhiteSpace(email))
+        {
+            alertMessage = "Proszę podać adres email.";
+            alertIsError = true;
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            alertMessage = "Proszę podać numer telefonu.";
+            alertIsError = true;
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(address) || string.IsNullOrWhiteSpace(city) || string.IsNullOrWhiteSpace(postalCode))
+        {
+            alertMessage = "Proszę wypełnić pełny adres wysyłki.";
+            alertIsError = true;
+            return;
+        }
+
+        isSubmitting = true;
+        alertMessage = null;
+
+        try
+        {
+            var fullAddress = $"{address}, {postalCode} {city}";
+
+            var command = new PlaceOrderCommand
+            {
+                UserId = currentUserId,
+                GuestEmail = isLoggedIn ? null : email,
+                GuestName = isLoggedIn ? null : $"{firstName} {lastName}",
+                GuestPhone = isLoggedIn ? null : phone,
+                ShippingAddress = fullAddress,
+                CustomerNotes = string.IsNullOrWhiteSpace(notes) ? null : notes,
+                Items = Cart.Items.Select(i => new PlaceOrderItem
+                {
+                    ProductId = i.ProductId,
+                    Quantity = i.Quantity,
+                    Price = i.Price
+                }).ToList()
+            };
+
+            var orderId = await Mediator.Send(command);
+
+            // If logged in, also try to link any previous guest orders
+            if (isLoggedIn && currentUserId.HasValue && !string.IsNullOrEmpty(email))
+            {
+                await Mediator.Send(new LinkGuestOrdersCommand
+                {
+                    UserId = currentUserId.Value,
+                    Email = email
+                });
+            }
+
+            Cart.Clear();
+
+            var guestEmail = isLoggedIn ? "" : email;
+            Navigation.NavigateTo($"/order-confirmation/{orderId}?guest={!isLoggedIn}&email={Uri.EscapeDataString(guestEmail)}");
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Wystąpił błąd: {ex.Message}";
+            alertIsError = true;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

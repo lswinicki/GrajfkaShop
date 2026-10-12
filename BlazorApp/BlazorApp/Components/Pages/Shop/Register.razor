@@ -1,0 +1,151 @@
+@page "/register"
+@layout BlazorApp.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Identity
+@using Domain.Entities
+@using Application.Requests.Commands.Auth.Register
+@inject NavigationManager Navigation
+@inject MediatR.IMediator Mediator
+
+<PageTitle>Rejestracja | Grajfka</PageTitle>
+
+<section class="shop-section" style="background: var(--shop-bg); min-height: 80vh; display: flex; align-items: center;">
+    <div class="shop-container" style="max-width: 460px;">
+        <div class="shop-panel-card" style="padding: 2.5rem;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 0.75rem;">✨</div>
+                <h1 class="shop-heading-lg" style="margin-bottom: 0.25rem;">Dołącz do Grajfka</h1>
+                <p class="shop-text">Załóż konto i śledź swoje zamówienia</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="shop-alert shop-alert-error">@errorMessage</div>
+            }
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="shop-form-group">
+                    <label class="shop-form-label">Imię *</label>
+                    <input type="text" class="shop-form-control" @bind="firstName" placeholder="Anna" />
+                </div>
+                <div class="shop-form-group">
+                    <label class="shop-form-label">Nazwisko *</label>
+                    <input type="text" class="shop-form-control" @bind="lastName" placeholder="Kowalska" />
+                </div>
+            </div>
+
+            <div class="shop-form-group">
+                <label class="shop-form-label">Email *</label>
+                <input type="email" class="shop-form-control" @bind="emailInput" placeholder="anna@email.com" />
+            </div>
+
+            <div class="shop-form-group">
+                <label class="shop-form-label">Hasło *</label>
+                <input type="password" class="shop-form-control" @bind="passwordInput" placeholder="Min. 6 znaków" />
+            </div>
+
+            <div class="shop-form-group">
+                <label class="shop-form-label">Potwierdź hasło *</label>
+                <input type="password" class="shop-form-control" @bind="confirmPassword" placeholder="Powtórz hasło" />
+            </div>
+
+            <button class="shop-btn shop-btn-primary" style="width: 100%; margin-top: 0.5rem;" @onclick="HandleRegister" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <div class="shop-spinner" style="width: 16px; height: 16px; margin-right: 0.5rem;"></div>
+                }
+                Zarejestruj się
+            </button>
+
+            <div style="text-align: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--shop-border);">
+                <p class="shop-text" style="margin-bottom: 0.5rem;">Masz już konto?</p>
+                <a href="/login@(returnUrl != null ? $"?returnUrl={Uri.EscapeDataString(returnUrl)}" : "")"
+                   class="shop-btn shop-btn-outline" style="width: 100%;">
+                    🔑 Zaloguj się
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? returnUrl { get; set; }
+
+    [SupplyParameterFromQuery(Name = "email")]
+    public string? prefillEmail { get; set; }
+
+    private string firstName = "";
+    private string lastName = "";
+    private string emailInput = "";
+    private string passwordInput = "";
+    private string confirmPassword = "";
+    private string? errorMessage;
+    private bool isLoading;
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(prefillEmail))
+            emailInput = prefillEmail;
+    }
+
+    private async Task HandleRegister()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
+        {
+            errorMessage = "Proszę podać imię i nazwisko.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(emailInput))
+        {
+            errorMessage = "Proszę podać adres email.";
+            return;
+        }
+        if (passwordInput.Length < 6)
+        {
+            errorMessage = "Hasło musi mieć minimum 6 znaków.";
+            return;
+        }
+        if (passwordInput != confirmPassword)
+        {
+            errorMessage = "Hasła nie są zgodne.";
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            var command = new RegisterCommand 
+            { 
+                Username = emailInput, 
+                Firstname = firstName, 
+                LastName = lastName, 
+                Email = emailInput, 
+                Password = passwordInput, 
+                ConfirmPassword = confirmPassword 
+            };
+
+            var success = await Mediator.Send(command);
+
+            if (success)
+            {
+                Navigation.NavigateTo($"/login{(returnUrl != null ? "?returnUrl=" + Uri.EscapeDataString(returnUrl) : "?registered=true")}");
+            }
+            else
+            {
+                errorMessage = "Rejestracja nie powiodła się. Prawdopodobnie taki użytkownik już istnieje.";
+            }
+        }
+        catch
+        {
+            errorMessage = "Wystąpił nieoczekiwany błąd podczas rejestracji.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

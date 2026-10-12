@@ -1,0 +1,53 @@
+@page "/order-confirmation/{OrderId:int}"
+@layout BlazorApp.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+
+<PageTitle>Zamówienie złożone | Grajfka</PageTitle>
+
+<section class="shop-section" style="background: var(--shop-bg);">
+    <div class="shop-container" style="max-width: 700px; text-align: center;">
+        <div style="font-size: 5rem; margin-bottom: 1.5rem; animation: shopFloat 3s ease-in-out infinite;">✅</div>
+        <h1 class="shop-heading-lg" style="margin-bottom: 0.75rem;">Dziękujemy za zamówienie!</h1>
+        <p class="shop-text-lg" style="margin-bottom: 0.5rem;">
+            Twoje zamówienie <strong>#@OrderId</strong> zostało przyjęte do realizacji.
+        </p>
+        <p class="shop-text" style="margin-bottom: 2.5rem;">
+            Otrzymasz potwierdzenie na podany adres email. Będziemy Cię informować o statusie zamówienia.
+        </p>
+
+        @if (isGuest)
+        {
+            <div class="shop-panel-card" style="padding: 2rem; margin-bottom: 2rem; background: linear-gradient(135deg, var(--shop-rose-light), var(--shop-cream));">
+                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🔑</div>
+                <h3 class="shop-heading-md" style="margin-bottom: 0.5rem;">Załóż konto, aby śledzić zamówienie</h3>
+                <p class="shop-text" style="margin-bottom: 1.25rem;">
+                    Zarejestruj się z adresem <strong>@guestEmail</strong>, aby mieć dostęp do historii zamówień,
+                    śledzić status przesyłki i szybciej składać kolejne zamówienia.
+                </p>
+                <a href="/register?email=@Uri.EscapeDataString(guestEmail)" class="shop-btn shop-btn-primary">
+                    ✨ Załóż konto
+                </a>
+            </div>
+        }
+
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            @if (!isGuest)
+            {
+                <a href="/my-orders" class="shop-btn shop-btn-primary">📋 Moje zamówienia</a>
+            }
+            <a href="/products" class="shop-btn shop-btn-outline">🛍️ Kontynuuj zakupy</a>
+            <a href="/" class="shop-btn shop-btn-outline">🏠 Strona główna</a>
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter] public int OrderId { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "guest")]
+    public bool isGuest { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "email")]
+    public string guestEmail { get; set; } = "";
+}

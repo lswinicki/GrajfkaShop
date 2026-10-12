@@ -1,0 +1,225 @@
+@page "/"
+@layout BlazorApp.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Application.Requests.Queries.Products.GetAllProducts
+@using Application.Requests.Queries.Products.Models
+@using Application.Requests.Queries.Categories.GetAllCategories
+@using Application.Requests.Commands.Category.Models
+@inject MediatR.IMediator Mediator
+
+<PageTitle>GRAJFKA - Biżuteria, Zaproszenia i nie tylko!</PageTitle>
+
+@* === Hero Section === *@
+<section class="shop-hero">
+    <div>
+        <h1 class="shop-heading-xl shop-hero-title">
+            Biżuteria i<br/>
+            <span class="shop-gradient-text">Zaproszenia</span><br/>
+            na Każdą Okazję
+        </h1>
+        <p class="shop-hero-desc">
+            Oferujemy wyjątkową biżuterię – bransoletki, kolczyki i naszyjniki – oraz piękne zaproszenia
+            i kartki na wesela, urodziny i chrzciny. Każdy produkt tworzony jest z pasją i dbałością o detale.
+        </p>
+        <div class="shop-hero-btns">
+            <a href="/products" class="shop-btn shop-btn-primary">Zobacz Ofertę</a>
+            <a href="/contact" class="shop-btn shop-btn-outline">Zamów projekt</a>
+        </div>
+    </div>
+    <div class="shop-hero-visual">
+        <div class="shop-hero-circle">
+            <span class="shop-hero-circle-icon">💌</span>
+        </div>
+        <div class="shop-hero-float-1"></div>
+        <div class="shop-hero-float-2"></div>
+    </div>
+</section>
+
+@* === Bestsellers === *@
+<section class="shop-section" style="background: white;">
+    <div class="shop-container">
+        <div class="shop-section-header">
+            <h2 class="shop-heading-lg">Nasze Bestsellery</h2>
+            <div class="shop-section-divider"></div>
+            <p class="shop-text-lg">Najpopularniejsze zaproszenia i dodatki wybierane przez naszych klientów</p>
+        </div>
+
+        @if (latestProducts == null)
+        {
+            <div class="shop-loading"><div class="shop-spinner"></div></div>
+        }
+        else if (latestProducts.Any())
+        {
+            <div class="shop-products-grid">
+                @foreach (var product in latestProducts)
+                {
+                    <a href="/product/@product.Id" class="shop-product-card">
+                        <div class="shop-product-img-wrap">
+                            @if (product.ImageUrls.Any())
+                            {
+                                <img src="@product.ImageUrls.First()" alt="@product.Name"/>
+                            }
+                            else
+                            {
+                                <span class="shop-product-placeholder-icon">@GetCategoryIcon(product.CategoryName)</span>
+                            }
+                            <span class="shop-product-badge">Nowość</span>
+                        </div>
+                        <div class="shop-product-body">
+                            <div class="shop-product-category">@product.CategoryName</div>
+                            <h3 class="shop-product-name">@product.Name</h3>
+                            <p class="shop-product-desc">@product.Description</p>
+                            <div class="shop-product-footer">
+                                <span class="shop-product-price">@product.Price.ToString("N2") zł</span>
+                                <span class="shop-product-cart-btn">Sprawdź →</span>
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center; padding: 3rem; color: var(--shop-text-muted);">
+                <p class="shop-text-lg">Wkrótce pojawią się tu nasze produkty!</p>
+                <a href="/contact" class="shop-btn shop-btn-primary" style="margin-top: 1rem;">Zapytaj o ofertę</a>
+            </div>
+        }
+    </div>
+</section>
+
+@* === Categories section === *@
+<section class="shop-section" style="background: linear-gradient(135deg, var(--shop-rose-light), var(--shop-cream));">
+    <div class="shop-container">
+        <div class="shop-section-header">
+            <h2 class="shop-heading-lg">Kategorie Produktów</h2>
+            <div class="shop-section-divider"></div>
+            <p class="shop-text-lg">Znajdź idealne rozwiązanie na każdą uroczystość</p>
+        </div>
+
+        @if (categories != null)
+        {
+            <div class="shop-categories-grid">
+                @foreach (var cat in categories)
+                {
+                    <a href="/products" class="shop-category-card">
+                        <div class="shop-category-bg @GetCategoryBgClass(cat.Name)">
+                            <span class="shop-category-icon">@GetCategoryIcon(cat.Name)</span>
+                        </div>
+                        <div class="shop-category-overlay"></div>
+                        <div class="shop-category-content">
+                            <h3 class="shop-category-title">@cat.Name</h3>
+                            @if (!string.IsNullOrEmpty(cat.Description))
+                            {
+                                <p class="shop-category-count">@cat.Description</p>
+                            }
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@* === About === *@
+<section class="shop-section" style="background: white;">
+    <div class="shop-container">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center;">
+            <div>
+                <h2 class="shop-heading-lg" style="margin-bottom: 1.5rem;">O Grajfka</h2>
+                <p class="shop-text-lg" style="margin-bottom: 2rem;">
+                    Od lat specjalizujemy się w tworzeniu wyjątkowych zaproszeń i biżuterii na różne uroczystości.
+                    Każdy projekt wykonujemy z pasją i dbałością o najdrobniejsze detale.
+                </p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 2.5rem; font-weight: 700; font-family: var(--font-display);" class="shop-gradient-text">2500+</div>
+                        <div class="shop-text">Zadowolonych klientów</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2.5rem; font-weight: 700; font-family: var(--font-display);" class="shop-gradient-text">150+</div>
+                        <div class="shop-text">Unikalnych projektów</div>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: center;">
+                <div style="width: 320px; height: 320px; background: linear-gradient(135deg, var(--shop-rose-light), var(--shop-cream));
+                            border-radius: 24px; padding: 2rem; box-shadow: var(--shop-shadow-lg); animation: shopFloat 6s ease-in-out infinite 3s;">
+                    <div style="width: 100%; height: 100%; background: white; border-radius: 16px;
+                                display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;">
+                        <span style="font-size: 4rem;">✨</span>
+                        <span style="font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; color: var(--shop-text);">Wyjątkowe momenty</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* === Footer === *@
+<footer class="shop-footer">
+    <div class="shop-footer-grid">
+        <div>
+            <div class="shop-footer-logo">💌 Grajfka</div>
+            <p style="color: #9ca3af; margin-bottom: 1rem;">Tworzę wyjątkowe zaproszenia i biżuterię.</p>
+            <div class="shop-social-links">
+                <a href="#" class="shop-social-link">📘</a>
+                <a href="#" class="shop-social-link">📷</a>
+            </div>
+        </div>
+        <div>
+            <h3>Kategorie</h3>
+            <a href="/products">Zaproszenia ślubne</a>
+            <a href="/products">Kartki urodzinowe</a>
+            <a href="/products">Biżuteria</a>
+        </div>
+        <div>
+            <h3>Obsługa</h3>
+            <a href="/contact">Kontakt</a>
+            <a href="/my-orders">Moje zamówienia</a>
+        </div>
+        <div>
+            <h3>Informacje</h3>
+            <a href="#">O nas</a>
+            <a href="#">Regulamin</a>
+        </div>
+    </div>
+    <div class="shop-footer-bottom">
+        <p>&copy; 2025 Grajfka. Wszystkie prawa zastrzeżone.</p>
+    </div>
+</footer>
+
+<a href="https://wa.me/48123456789" target="_blank" class="shop-whatsapp-float">
+    💬
+    <span class="shop-whatsapp-tooltip">Napisz na WhatsApp</span>
+</a>
+
+@code {
+    private IEnumerable<ProductDto>? latestProducts;
+    private IEnumerable<CategoryDto>? categories;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Mediator.Send(new GetAllProductsQuery { ActiveOnly = true, PageSize = 8 });
+        latestProducts = result.Products;
+        categories = await Mediator.Send(new GetAllCategoriesQuery());
+    }
+
+    private string GetCategoryIcon(string name) => name.ToLower() switch
+    {
+        var n when n.Contains("ślub") || n.Contains("wedding") => "💒",
+        var n when n.Contains("komunij") || n.Contains("communion") => "⛪",
+        var n when n.Contains("urodzin") || n.Contains("birthday") => "🎂",
+        var n when n.Contains("biżuter") || n.Contains("jewelry") => "💎",
+        _ => "💌"
+    };
+
+    private string GetCategoryBgClass(string name) => name.ToLower() switch
+    {
+        var n when n.Contains("ślub") => "wedding",
+        var n when n.Contains("komunij") => "communion",
+        var n when n.Contains("urodzin") => "birthday",
+        var n when n.Contains("biżuter") => "jewelry",
+        _ => "wedding"
+    };
+}

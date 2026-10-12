@@ -1,0 +1,100 @@
+@page "/cart"
+@layout BlazorApp.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Application.Services
+@inject CartService CartSvc
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>Koszyk | Grajfka</PageTitle>
+
+<section class="shop-section" style="background: var(--shop-bg);">
+    <div class="shop-container" style="max-width: 900px;">
+        <div class="shop-section-header">
+            <h1 class="shop-heading-lg">Twój Koszyk</h1>
+            <div class="shop-section-divider"></div>
+        </div>
+
+        @if (!CartSvc.Items.Any())
+        {
+            <div class="shop-panel-card" style="text-align: center; padding: 4rem 2rem;">
+                <div style="font-size: 5rem; margin-bottom: 1rem;">🛒</div>
+                <h3 class="shop-heading-md" style="margin-bottom: 0.5rem;">Koszyk jest pusty</h3>
+                <p class="shop-text" style="margin-bottom: 2rem;">Dodaj produkty, aby kontynuować zakupy</p>
+                <a href="/products" class="shop-btn shop-btn-primary">🛍️ Przeglądaj produkty</a>
+            </div>
+        }
+        else
+        {
+            <div class="shop-panel-card">
+                @foreach (var item in CartSvc.Items)
+                {
+                    <div class="shop-cart-item">
+                        <div class="shop-cart-item-img">
+                            @if (!string.IsNullOrEmpty(item.ImageUrl))
+                            {
+                                <img src="@item.ImageUrl" alt="@item.ProductName"/>
+                            }
+                            else
+                            {
+                                <span>💌</span>
+                            }
+                        </div>
+                        <div class="shop-cart-item-info">
+                            <a href="/product/@item.ProductId" class="shop-cart-item-name">@item.ProductName</a>
+                            <div class="shop-cart-item-price">@item.Price.ToString("N2") zł</div>
+                        </div>
+                        <div class="shop-cart-item-qty">
+                            <button class="shop-cart-qty-btn" @onclick="() => CartSvc.UpdateQuantity(item.ProductId, item.Quantity - 1)">−</button>
+                            <span class="shop-cart-qty-value">@item.Quantity</span>
+                            <button class="shop-cart-qty-btn" @onclick="() => CartSvc.UpdateQuantity(item.ProductId, item.Quantity + 1)">+</button>
+                        </div>
+                        <div class="shop-cart-item-total">
+                            @((item.Price * item.Quantity).ToString("N2")) zł
+                        </div>
+                        <button class="shop-cart-remove" @onclick="() => CartSvc.RemoveItem(item.ProductId)" title="Usuń">✕</button>
+                    </div>
+                }
+            </div>
+
+            @* Summary *@
+            <div class="shop-cart-summary">
+                <div class="shop-cart-summary-row">
+                    <span>Produkty (@CartSvc.ItemCount szt.)</span>
+                    <span>@CartSvc.Total.ToString("N2") zł</span>
+                </div>
+                <div class="shop-cart-summary-row">
+                    <span>Dostawa</span>
+                    <span style="color: var(--shop-rose);">Ustalana indywidualnie</span>
+                </div>
+                <div class="shop-cart-summary-total">
+                    <span>Razem</span>
+                    <span>@CartSvc.Total.ToString("N2") zł</span>
+                </div>
+                <button class="shop-btn shop-btn-primary" style="width: 100%; margin-top: 1rem;" @onclick="GoToCheckout">
+                    Przejdź do realizacji →
+                </button>
+                <a href="/products" style="display: block; text-align: center; margin-top: 0.75rem; font-size: 0.85rem; color: var(--shop-text-muted);">
+                    ← Kontynuuj zakupy
+                </a>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    protected override void OnInitialized()
+    {
+        CartSvc.OnChange += StateHasChanged;
+    }
+
+    private void GoToCheckout()
+    {
+        Navigation.NavigateTo("/checkout");
+    }
+
+    public void Dispose()
+    {
+        CartSvc.OnChange -= StateHasChanged;
+    }
+}

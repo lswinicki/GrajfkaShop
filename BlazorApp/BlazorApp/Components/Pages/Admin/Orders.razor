@@ -1,0 +1,242 @@
+@page "/admin/orders"
+@layout BlazorApp.Components.Layout.AdminLayout
+@rendermode InteractiveServer
+@using Application.Requests.Queries.Orders.GetAllOrders
+@using Application.Requests.Queries.Orders.Models
+@using Application.Requests.Commands.Order.UpdateStatus
+@using Domain.Entities
+@inject MediatR.IMediator Mediator
+
+<PageTitle>Panel Admina - Zamówienia</PageTitle>
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-page-title">Zamówienia</h1>
+        <p class="admin-page-subtitle">Zarządzaj zamówieniami klientów i gości</p>
+    </div>
+</div>
+
+@if (alertMessage != null)
+{
+    <div class="admin-alert @(alertIsError ? "admin-alert-danger" : "admin-alert-success")">@alertMessage</div>
+}
+
+@if (orders == null)
+{
+    <div class="admin-loading"><div class="admin-spinner"></div> Ładowanie zamówień...</div>
+}
+else
+{
+    <div class="admin-card">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Klient</th>
+                    <th>Data</th>
+                    <th>Kwota</th>
+                    <th>Status</th>
+                    <th>Płatność</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!orders.Any())
+                {
+                    <tr>
+                        <td colspan="7">
+                            <div class="admin-empty">
+                                <div class="admin-empty-icon">🛒</div>
+                                <p>Brak zamówień</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @foreach (var order in orders)
+                {
+                    <tr>
+                        <td><strong>#@order.Id</strong></td>
+                        <td>
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <span style="font-weight: 600; font-size: 0.85rem;">@order.CustomerDisplayName</span>
+                                @if (order.IsGuestOrder)
+                                {
+                                    <span class="admin-badge admin-badge-warning" style="font-size: 0.7rem; width: fit-content;">Gość</span>
+                                }
+                                else
+                                {
+                                    <span class="admin-badge admin-badge-active" style="font-size: 0.7rem; width: fit-content;">Klient</span>
+                                }
+                            </div>
+                        </td>
+                        <td>@order.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td>@order.TotalAmount.ToString("N2") zł</td>
+                        <td>
+                            <select class="admin-form-select" style="width: auto; padding: 0.3rem 0.5rem; font-size: 0.8rem;"
+                                    value="@order.Status"
+                                    @onchange="(e) => UpdateStatus(order, e)">
+                                <option value="New" selected="@(order.Status == "New")">Nowe</option>
+                                <option value="Pending" selected="@(order.Status == "Pending")">W trakcie</option>
+                                <option value="Approved" selected="@(order.Status == "Approved")">Zatwierdzone</option>
+                                <option value="Done" selected="@(order.Status == "Done")">Zrealizowane</option>
+                                <option value="Cancelled" selected="@(order.Status == "Cancelled")">Anulowane</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="admin-form-select" style="width: auto; padding: 0.3rem 0.5rem; font-size: 0.8rem;"
+                                    value="@order.PaymentStatus"
+                                    @onchange="(e) => UpdatePayment(order, e)">
+                                <option value="Pending" selected="@(order.PaymentStatus == "Pending")">Oczekuje</option>
+                                <option value="Paid" selected="@(order.PaymentStatus == "Paid")">Opłacone</option>
+                                <option value="Failed" selected="@(order.PaymentStatus == "Failed")">Nieudane</option>
+                                <option value="Refunded" selected="@(order.PaymentStatus == "Refunded")">Zwrócone</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button class="admin-btn admin-btn-outline admin-btn-sm" @onclick="() => ToggleDetails(order.Id)">
+                                @(expandedOrderId == order.Id ? "▲ Zwiń" : "▼ Szczegóły")
+                            </button>
+                        </td>
+                    </tr>
+                    @if (expandedOrderId == order.Id)
+                    {
+                        <tr>
+                            <td colspan="7" style="padding: 0 1rem 1rem;">
+                                <div class="admin-order-detail">
+                                    @* Customer info *@
+                                    <div style="margin-bottom: 0.75rem; display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: 0.85rem;">
+                                        @if (!string.IsNullOrEmpty(order.GuestEmail ?? (order.IsGuestOrder ? null : null)))
+                                        {
+                                            <div><strong>📧 Email:</strong> @(order.GuestEmail)</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(order.GuestPhone))
+                                        {
+                                            <div><strong>📱 Telefon:</strong> @order.GuestPhone</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(order.ShippingAddress))
+                                        {
+                                            <div><strong>📍 Adres:</strong> @order.ShippingAddress</div>
+                                        }
+                                    </div>
+                                    
+                                    <strong>Produkty w zamówieniu:</strong>
+                                    @if (order.Items.Any())
+                                    {
+                                        <ul class="admin-order-items">
+                                            @foreach (var item in order.Items)
+                                            {
+                                                <li>
+                                                    <span>@item.ProductName × @item.Quantity</span>
+                                                    <span>@((item.Price * item.Quantity).ToString("N2")) zł</span>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <p style="color: var(--admin-text-muted); margin: 0.5rem 0 0;">Brak pozycji</p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(order.CustomerNotes))
+                                    {
+                                        <div style="margin-top: 0.75rem;">
+                                            <strong>Uwagi klienta:</strong>
+                                            <p style="margin: 0.25rem 0 0; color: var(--admin-text-muted);">@order.CustomerNotes</p>
+                                        </div>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IEnumerable<OrderDto>? orders;
+    private int? expandedOrderId;
+    private string? alertMessage;
+    private bool alertIsError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        orders = await Mediator.Send(new GetAllOrdersQuery());
+    }
+
+    private void ToggleDetails(int orderId)
+    {
+        expandedOrderId = expandedOrderId == orderId ? null : orderId;
+    }
+
+    private async Task UpdateStatus(OrderDto order, ChangeEventArgs e)
+    {
+        var newStatus = e.Value?.ToString();
+        if (string.IsNullOrEmpty(newStatus)) return;
+
+        try
+        {
+            var orderStatus = Enum.Parse<OrderStatus>(newStatus);
+            var paymentStatus = Enum.Parse<PaymentStatus>(order.PaymentStatus);
+
+            await Mediator.Send(new UpdateOrderStatusCommand
+            {
+                Id = order.Id,
+                Status = orderStatus,
+                PaymentStatus = paymentStatus
+            });
+
+            alertMessage = $"Status zamówienia #{order.Id} zmieniony na \"{GetStatusLabel(newStatus)}\".";
+            alertIsError = false;
+            await LoadOrders();
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Błąd: {ex.Message}";
+            alertIsError = true;
+        }
+    }
+
+    private async Task UpdatePayment(OrderDto order, ChangeEventArgs e)
+    {
+        var newPayment = e.Value?.ToString();
+        if (string.IsNullOrEmpty(newPayment)) return;
+
+        try
+        {
+            var orderStatus = Enum.Parse<OrderStatus>(order.Status);
+            var paymentStatus = Enum.Parse<PaymentStatus>(newPayment);
+
+            await Mediator.Send(new UpdateOrderStatusCommand
+            {
+                Id = order.Id,
+                Status = orderStatus,
+                PaymentStatus = paymentStatus
+            });
+
+            alertMessage = $"Status płatności zamówienia #{order.Id} zmieniony.";
+            alertIsError = false;
+            await LoadOrders();
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Błąd: {ex.Message}";
+            alertIsError = true;
+        }
+    }
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "New" => "Nowe",
+        "Pending" => "W trakcie",
+        "Approved" => "Zatwierdzone",
+        "Done" => "Zrealizowane",
+        "Cancelled" => "Anulowane",
+        _ => status
+    };
+}

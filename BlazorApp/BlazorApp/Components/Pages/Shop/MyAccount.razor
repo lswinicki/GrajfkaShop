@@ -1,0 +1,269 @@
+@page "/moje-konto"
+@layout BlazorApp.Components.Layout.MainLayout
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@using Domain.Entities
+@using Application.Requests.Queries.Orders.GetOrdersByUser
+@using Application.Requests.Queries.Orders.Models
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<UserDao> UserManager
+@inject MediatR.IMediator Mediator
+@inject NavigationManager Navigation
+
+<PageTitle>Moje Konto | Grajfka</PageTitle>
+
+<section class="shop-section" style="background: var(--shop-bg); min-height: 80vh;">
+    <div class="shop-container" style="max-width: 960px;">
+
+        @if (!isAuthenticated)
+        {
+            @* Elegant unauthenticated state *@
+            <div style="text-align: center; padding: 5rem 2rem;">
+                <div style="font-size: 5rem; margin-bottom: 1.5rem; animation: shopFloat 3s ease-in-out infinite;">🔒</div>
+                <h1 class="shop-heading-lg" style="margin-bottom: 0.75rem;">Zaloguj się, aby zobaczyć swoje konto</h1>
+                <p class="shop-text-lg" style="margin-bottom: 0.5rem; max-width: 500px; margin-left: auto; margin-right: auto;">
+                    Zaloguj się, aby uzyskać dostęp do historii swoich zamówień i śledzić statusy przesyłek.
+                </p>
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; flex-wrap: wrap;">
+                    <a href="/login?returnUrl=/moje-konto" class="shop-btn shop-btn-primary">🔑 Zaloguj się</a>
+                    <a href="/register?returnUrl=/moje-konto" class="shop-btn shop-btn-outline">✨ Zarejestruj się</a>
+                </div>
+            </div>
+        }
+        else
+        {
+            @* Profile header *@
+            <div class="shop-profile-header">
+                <div class="shop-profile-avatar">
+                    @(userName?.Substring(0, 1).ToUpper() ?? "U")
+                </div>
+                <div>
+                    <h1 class="shop-heading-lg" style="margin-bottom: 0.25rem;">@userName</h1>
+                    <p class="shop-text">@userEmail</p>
+                </div>
+            </div>
+
+            @* Tabs *@
+            <div class="shop-profile-tabs">
+                <button class="shop-profile-tab @(activeTab == "orders" ? "active" : "")" @onclick='() => activeTab = "orders"'>
+                    📋 Moje zamówienia
+                </button>
+                <button class="shop-profile-tab @(activeTab == "settings" ? "active" : "")" @onclick='() => activeTab = "settings"'>
+                    ⚙️ Ustawienia konta
+                </button>
+            </div>
+
+            @if (activeTab == "orders")
+            {
+                @* Orders tab *@
+                @if (orders == null)
+                {
+                    <div class="shop-loading"><div class="shop-spinner"></div> Ładowanie zamówień...</div>
+                }
+                else if (!orders.Any())
+                {
+                    <div class="shop-panel-card" style="text-align: center; padding: 3rem;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">🛍️</div>
+                        <h3 class="shop-heading-md">Brak zamówień</h3>
+                        <p class="shop-text" style="margin-bottom: 1.5rem;">Nie złożyłeś jeszcze żadnych zamówień</p>
+                        <a href="/products" class="shop-btn shop-btn-primary">Przejdź do sklepu</a>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var order in orders)
+                    {
+                        <div class="shop-order-card" @onclick="() => ToggleOrder(order.Id)">
+                            <div class="shop-order-card-header">
+                                <div>
+                                    <div class="shop-order-card-id">#@order.Id</div>
+                                    <div class="shop-order-card-date">@order.OrderDate.ToString("dd MMMM yyyy")</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <span class="shop-badge shop-badge-@order.Status.ToLower()">@GetStatusLabel(order.Status)</span>
+                                    <span class="shop-order-card-amount">@order.TotalAmount.ToString("N2") zł</span>
+                                    <span style="color: var(--shop-text-muted);">@(expandedOrderId == order.Id ? "▲" : "▼")</span>
+                                </div>
+                            </div>
+
+                            @* Product thumbnails *@
+                            <div class="shop-order-card-thumbs">
+                                @foreach (var item in order.Items.Take(4))
+                                {
+                                    <div class="shop-order-thumb">
+                                        @if (!string.IsNullOrEmpty(item.ProductImageUrl))
+                                        {
+                                            <img src="@item.ProductImageUrl" alt="@item.ProductName"/>
+                                        }
+                                        else
+                                        {
+                                            <span>💌</span>
+                                        }
+                                    </div>
+                                }
+                                @if (order.Items.Count > 4)
+                                {
+                                    <div class="shop-order-thumb shop-order-thumb-more">
+                                        +@(order.Items.Count - 4)
+                                    </div>
+                                }
+                            </div>
+
+                            @if (expandedOrderId == order.Id)
+                            {
+                                <div class="shop-order-card-details" @onclick:stopPropagation>
+                                    @if (!string.IsNullOrEmpty(order.ShippingAddress))
+                                    {
+                                        <p style="font-size: 0.85rem; color: var(--shop-text-muted); margin-bottom: 0.75rem;">
+                                            📍 @order.ShippingAddress
+                                        </p>
+                                    }
+                                    <ul class="shop-order-items">
+                                        @foreach (var item in order.Items)
+                                        {
+                                            <li>
+                                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                                    @if (!string.IsNullOrEmpty(item.ProductImageUrl))
+                                                    {
+                                                        <img src="@item.ProductImageUrl" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;" alt=""/>
+                                                    }
+                                                    <span>@item.ProductName × @item.Quantity</span>
+                                                </div>
+                                                <strong>@((item.Price * item.Quantity).ToString("N2")) zł</strong>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+            }
+            else if (activeTab == "settings")
+            {
+                @* Settings tab *@
+                <div class="shop-panel-card" style="padding: 2rem;">
+                    <h3 class="shop-heading-md" style="margin-bottom: 1.5rem;">Dane konta</h3>
+
+                    @if (!string.IsNullOrEmpty(settingsMessage))
+                    {
+                        <div class="shop-alert @(settingsError ? "shop-alert-error" : "shop-alert-success")">@settingsMessage</div>
+                    }
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="shop-form-group">
+                            <label class="shop-form-label">Imię</label>
+                            <input type="text" class="shop-form-control" @bind="editFirstName"/>
+                        </div>
+                        <div class="shop-form-group">
+                            <label class="shop-form-label">Nazwisko</label>
+                            <input type="text" class="shop-form-control" @bind="editLastName"/>
+                        </div>
+                    </div>
+
+                    <div class="shop-form-group">
+                        <label class="shop-form-label">Email</label>
+                        <input type="email" class="shop-form-control" value="@userEmail" disabled/>
+                        <small style="color: var(--shop-text-muted); font-size: 0.8rem;">Email nie podlega zmianie</small>
+                    </div>
+
+                    <div class="shop-form-group">
+                        <label class="shop-form-label">Telefon</label>
+                        <input type="tel" class="shop-form-control" @bind="editPhone" placeholder="+48 123 456 789"/>
+                    </div>
+
+                    <button class="shop-btn shop-btn-primary" style="margin-top: 0.5rem;" @onclick="SaveSettings">
+                        💾 Zapisz zmiany
+                    </button>
+                </div>
+            }
+        }
+    </div>
+</section>
+
+@code {
+    private bool isAuthenticated;
+    private string? userName;
+    private string? userEmail;
+    private string activeTab = "orders";
+    private int? expandedOrderId;
+
+    // Orders
+    private List<OrderDto>? orders;
+
+    // Settings
+    private string editFirstName = "";
+    private string editLastName = "";
+    private string editPhone = "";
+    private string? settingsMessage;
+    private bool settingsError;
+
+    private UserDao? currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated != true)
+        {
+            isAuthenticated = false;
+            return;
+        }
+
+        isAuthenticated = true;
+        currentUser = await UserManager.GetUserAsync(authState.User);
+        if (currentUser == null) return;
+
+        userName = $"{currentUser.FirstName} {currentUser.LastName}";
+        userEmail = currentUser.Email;
+        editFirstName = currentUser.FirstName;
+        editLastName = currentUser.LastName;
+        editPhone = currentUser.PhoneNumber ?? "";
+
+        // Load orders
+        var result = await Mediator.Send(new GetOrdersByUserQuery
+        {
+            UserId = currentUser.Id,
+            Email = currentUser.Email
+        });
+        orders = result.ToList();
+    }
+
+    private void ToggleOrder(int orderId)
+    {
+        expandedOrderId = expandedOrderId == orderId ? null : orderId;
+    }
+
+    private async Task SaveSettings()
+    {
+        if (currentUser == null) return;
+
+        settingsMessage = null;
+        currentUser.FirstName = editFirstName;
+        currentUser.LastName = editLastName;
+        currentUser.PhoneNumber = string.IsNullOrWhiteSpace(editPhone) ? null : editPhone;
+
+        var result = await UserManager.UpdateAsync(currentUser);
+        if (result.Succeeded)
+        {
+            userName = $"{editFirstName} {editLastName}";
+            settingsMessage = "Dane zostały zapisane.";
+            settingsError = false;
+        }
+        else
+        {
+            settingsMessage = string.Join(" ", result.Errors.Select(e => e.Description));
+            settingsError = true;
+        }
+    }
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "New" => "Nowe",
+        "Pending" => "W realizacji",
+        "Approved" => "Wysłano",
+        "Done" => "Dostarczone",
+        "Cancelled" => "Anulowane",
+        _ => status
+    };
+}

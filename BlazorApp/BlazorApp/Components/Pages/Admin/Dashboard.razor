@@ -1,0 +1,138 @@
+@page "/admin"
+@layout BlazorApp.Components.Layout.AdminLayout
+@rendermode InteractiveServer
+@using Application.Requests.Queries.Admin.GetDashboardStats
+@using Application.Requests.Queries.Orders.GetAllOrders
+@using Application.Requests.Queries.Orders.Models
+@inject MediatR.IMediator Mediator
+
+<PageTitle>Panel Admina - Dashboard</PageTitle>
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-page-title">Dashboard</h1>
+        <p class="admin-page-subtitle">Przegląd sklepu Grajfka</p>
+    </div>
+</div>
+
+@if (stats == null)
+{
+    <div class="admin-loading"><div class="admin-spinner"></div> Ładowanie...</div>
+}
+else
+{
+    <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+            <div class="admin-stat-icon purple">📦</div>
+            <div class="admin-stat-info">
+                <div class="admin-stat-value">@stats.TotalProducts</div>
+                <div class="admin-stat-label">Produktów</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-icon green">🛒</div>
+            <div class="admin-stat-info">
+                <div class="admin-stat-value">@stats.TotalOrders</div>
+                <div class="admin-stat-label">Zamówień</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-icon blue">🏷️</div>
+            <div class="admin-stat-info">
+                <div class="admin-stat-value">@stats.TotalCategories</div>
+                <div class="admin-stat-label">Kategorii</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-icon orange">💰</div>
+            <div class="admin-stat-info">
+                <div class="admin-stat-value">@stats.TotalRevenue.ToString("N2") zł</div>
+                <div class="admin-stat-label">Przychód</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-icon pink">🆕</div>
+            <div class="admin-stat-info">
+                <div class="admin-stat-value">@stats.NewOrdersCount</div>
+                <div class="admin-stat-label">Nowe zamówienia</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-icon blue">✉️</div>
+            <div class="admin-stat-info">
+                <div class="admin-stat-value">@stats.UnreadMessages</div>
+                <div class="admin-stat-label">Nieprzeczytane wiadomości</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h3 class="admin-card-title">Ostatnie zamówienia</h3>
+            <a href="/admin/orders" class="admin-btn admin-btn-outline admin-btn-sm">Zobacz wszystkie</a>
+        </div>
+        @if (recentOrders != null && recentOrders.Any())
+        {
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Data</th>
+                        <th>Kwota</th>
+                        <th>Status</th>
+                        <th>Płatność</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in recentOrders.Take(10))
+                    {
+                        <tr>
+                            <td><strong>#@order.Id</strong></td>
+                            <td>@order.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td>@order.TotalAmount.ToString("N2") zł</td>
+                            <td><span class="admin-badge-status badge-@order.Status.ToLower()">@GetStatusLabel(order.Status)</span></td>
+                            <td><span class="admin-badge-status badge-@order.PaymentStatus.ToLower()">@GetPaymentLabel(order.PaymentStatus)</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="admin-empty">
+                <div class="admin-empty-icon">🛒</div>
+                <p>Brak zamówień</p>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private DashboardStatsDto? stats;
+    private IEnumerable<OrderDto>? recentOrders;
+
+    protected override async Task OnInitializedAsync()
+    {
+        stats = await Mediator.Send(new GetDashboardStatsQuery());
+        recentOrders = await Mediator.Send(new GetAllOrdersQuery());
+    }
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "New" => "Nowe",
+        "Pending" => "W trakcie",
+        "Approved" => "Zatwierdzone",
+        "Cancelled" => "Anulowane",
+        "Done" => "Zrealizowane",
+        _ => status
+    };
+
+    private string GetPaymentLabel(string status) => status switch
+    {
+        "Pending" => "Oczekuje",
+        "Paid" => "Opłacone",
+        "Failed" => "Nieudane",
+        "Refunded" => "Zwrócone",
+        _ => status
+    };
+}

@@ -14,6 +14,12 @@ public class CategoryDao
     [MaxLength(100)]
     public required string Name { get; set; }
     
+    [MaxLength(500)]
+    public string? Description { get; set; }
+    
+    [MaxLength(500)]
+    public string? ImageUrl { get; set; }
+    
     public virtual ICollection<ProductDao>? Products { get; set; }
 
     [SetsRequiredMembers]

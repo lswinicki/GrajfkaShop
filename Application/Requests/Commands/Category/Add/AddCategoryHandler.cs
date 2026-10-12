@@ -8,8 +8,6 @@ public class AddCategoryHandler(ICategoryRepository categoryRepository) : IReque
 {
     public async Task<int> Handle(AddCategoryCommand request, CancellationToken cancellationToken)
     {
-        var result = await categoryRepository.AddAsync(new CategoryDao(request.Name), cancellationToken);
-        
-        return result;
+        return await categoryRepository.AddAsync(new CategoryDao(request.Name), cancellationToken);
     }
 }
